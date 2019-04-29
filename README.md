@@ -1,2 +1,2 @@
 # prattools
-Bioinformatics tools
+Bioinformatics Helpful Tools -- Personal Library
