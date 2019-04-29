@@ -31,7 +31,7 @@ fin.close()
 
 #print file
 print('Chr\tStart\tEnd\tElemCounts')
-fin = open(os.environ['FASTA_PATH'],'r')
+fin = open(os.environ['HG19CHRFA'],'r')
 for line in fin:
 	line = line.strip()
 	if(">" in line):
