@@ -4,7 +4,7 @@ import os
 
 #param check
 if(len(sys.argv)!=3):
-	print "USAGE: python TSVToSafeBed.py [InputTSV] [OutputTSV]"
+	print("USAGE: python TSVToSafeBed.py [InputTSV] [OutputTSV]")
 	sys.exit(0)
 
 SAFE_DELIM = ':::' 

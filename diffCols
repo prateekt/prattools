@@ -3,7 +3,7 @@ import sys
 import os
 
 if(len(sys.argv)!=5):
-	print "USAGE: python intersectCols.py [File1] [File2] [File1Cols] [File2Cols]"
+	print "USAGE: python diffCols.py [File1] [File2] [File1Cols] [File2Cols]"
 else:
 	
 	#extract params

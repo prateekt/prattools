@@ -3,7 +3,7 @@ import sys
 import gzip
 
 if(len(sys.argv)<2):
-	print "USAGE: python validateCols.py [File] [OutFile]"
+	print("USAGE: python validateCols.py [File] [OutFile]")
 else:
 	if(sys.argv[1][-3:]=='.gz'):
 		f=gzip.open(sys.argv[1],'r')

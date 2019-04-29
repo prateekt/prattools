@@ -10,7 +10,7 @@ inFile = sys.argv[1]
 outFile = sys.argv[2]
 
 #hash sizes
-CHROM_SIZE_FILE = '/home/prtandon/Desktop/prattools/Hg1k_v37_fasta/hg19.chrom.sizes'
+CHROM_SIZE_FILE = os.environ['CHROM_SIZES']
 sizeHash = dict()
 fin = open(CHROM_SIZE_FILE,'r')
 for line in fin:

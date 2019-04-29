@@ -3,7 +3,7 @@ import os
 import sys
 
 if(len(sys.argv)!=4):
-	print "USAGE: python SVBedSpliiter.py [IN_BED] [OUT_PREFIX] [SPLIT_COUNT]"
+	print("USAGE: python SVBedSpliiter.py [IN_BED] [OUT_PREFIX] [SPLIT_COUNT]")
 	sys.exit()
 inBed = sys.argv[1]
 outPrefix = sys.argv[2]
@@ -40,4 +40,4 @@ if(cnt!=0):
 	fout.close()
 	cnt=0
 fin.close()
-print 'Wrote ' + str(fcnt) + ' files.'
+print('Wrote ' + str(fcnt) + ' files.')

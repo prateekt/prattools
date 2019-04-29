@@ -3,7 +3,7 @@ import os
 import sys
 
 if(len(sys.argv)<3):
-	print "USAGE: python stackFiles.py [OutputFile] [file 1] [file2]...[fileN] where all files have same header."
+	print("USAGE: python stackFiles.py [OutputFile] [file 1] [file2]...[fileN] where all files have same header.")
 	sys.exit(1)
 
 #output file
@@ -23,7 +23,7 @@ for i in range(2,len(sys.argv)):
 		FirstFile = False
 		headerO = header
 	if(headerO!='' and header!=headerO):
-		print 'WARNING:HEADERS DO NOT MATCH.'
+		print('ERROR:HEADERS DO NOT MATCH.')
 		sys.exit(1)
 	else:
 		for line in f:

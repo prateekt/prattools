@@ -37,7 +37,7 @@ fin.close()
 
 #print file
 print('Chr\tStart\tEnd\tVals')
-fin = open('/Users/ptandon/Desktop/tools/prattools/Hg1k_v37_fasta/chr_fa.fa','r')
+fin = open(os.environ['CHR_FASTA_PATH'],'r')
 for line in fin:
 	line = line.strip()
 	if(">" in line):

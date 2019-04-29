@@ -5,12 +5,12 @@ import uuid
 
 #args
 if(len(sys.argv)!=2):
-	print "USAGE: python mtable2bedgraph.py [mtable_in_file]"
+	print("USAGE: python mtable2bedgraph.py [mtable_in_file]")
 	sys.exit()
 in_file = sys.argv[1]
 
 #hash chrom sizes
-chrFin = open('/home/prtandon/Desktop/prattools/chromSizes.bed','r')
+chrFin = open(os.environ['CHROM_SIZES'],'r')
 startMap = dict()
 endMap = dict()
 for line in chrFin:
@@ -60,7 +60,7 @@ os.system('sortBed2 '+tempFile+' > '+tempFile+'1.bed')
 
 #create bedgraph file out of sorted bed
 fin = open(tempFile+'1.bed','r')
-print 'track type=bedGraph name=\''+in_file+'\' description=\''+in_file+'\''
+print('track type=bedGraph name=\''+in_file+'\' description=\''+in_file+'\'')
 for line in fin:
 	print(line.strip())
 

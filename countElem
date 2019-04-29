@@ -31,7 +31,7 @@ fin.close()
 
 #print file
 print('Chr\tStart\tEnd\tElemCounts')
-fin = open('/Users/ptandon/Desktop/tools/prattools/Hg1k_v37_fasta/chr_fa.fa','r')
+fin = open(os.environ['FASTA_PATH'],'r')
 for line in fin:
 	line = line.strip()
 	if(">" in line):

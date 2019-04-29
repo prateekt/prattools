@@ -4,7 +4,7 @@ import sys
 
 #check input
 if(len(sys.argv)!=4):
-	print "USAGE: python intersectVCF.py [VCF_file] [DNM_file] [DNM_file_cols]"
+	print("USAGE: python intersectVCF.py [VCF_file] [DNM_file] [DNM_file_cols]")
 else:
 
 	#extract params
@@ -39,13 +39,13 @@ else:
 	
 	#print final table
 	DNMFile = open(DNM_file,'r')
-	print 'Chr\tPos\tIs_In_VCF\tHas_RS_Num'
+	print('Chr\tPos\tIs_In_VCF\tHas_RS_Num')
 	DNMFile.readline() #discard header
 	for line in DNMFile:
 		lineParts = line.split('\t')
 		hashStr = '\t'.join([lineParts[x].strip() for x in DNMFileCols])
 		lineToWrite = hashStr + '\t' + str(isInVCF[hashStr]) + '\t' + str(hasRS[hashStr])
-		print lineToWrite
+		print(lineToWrite)
 
 	 	
 			
