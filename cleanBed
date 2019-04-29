@@ -1,0 +1,44 @@
+#!/usr/bin/python
+import sys
+import os
+import re
+
+#script filters bed feels for unclean variants that cannot easily be annotated
+#ASSUMES NO HEADER (like most bed files)
+
+if(len(sys.argv)!=4):
+	print "USAGE: python cleanBed.py [BedFile] [Output File] [DropFile]"
+else:
+	#extract params
+	BedFile = sys.argv[1]
+	OutputFile = sys.argv[2]
+	DropFile = sys.argv[3]
+
+	#filter
+	fin = open(BedFile,'r')
+	fout = open(OutputFile,'w')
+	ferr = open(DropFile,'w')
+	
+	#loop
+	for line in fin:
+		
+		try :	
+			#extract parts
+			lineParts = line.split('\t')
+			chrs = lineParts[0].strip()
+			start = int(lineParts[1].strip())
+			fin = int(lineParts[2].strip())
+			ref = lineParts[3].strip()
+			alt = lineParts[4].strip()
+
+			#checks
+			emptyStrs = (ref=="" or alt=="")
+			validRef = (set(ref) <= {"A", "C", "T", "G", "-"})
+			validAlt = (set(alt) <= {"A", "C", "T", "G", "-"})
+			if(not emptyStrs and validRef and validAlt):
+				fout.write(line.strip() + '\n')
+			else:
+				ferr.write(line.strip() + '\n')
+					
+		except:
+			ferr.write(line.strip() + '\n')

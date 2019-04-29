@@ -1,0 +1,60 @@
+#!/anaconda3/bin/python
+import sys
+import os
+import gzip
+
+if(len(sys.argv)<3):
+	print("USAGE: python grepCols.py [TSV File] [-h] [h1] [h2]...[hn]")
+	print("USAGE: python grepCols.py [TSV File] [-f] [headerFile]")
+	print("USAGE: python grepCols.py [TSV File] [-c] [c1],[c2],[c3]")
+	print("USAGE: python grepCols.py [TSV File] [-cnh] [c1],[c2],[c3]")
+elif(sys.argv[2] not in ['-h','-f','-c','-cnh']):
+	print("USAGE: python grepCols.py [TSV File] [-h] [h1] [h2]...[hn]")
+	print("USAGE: python grepCols.py [TSV File] [-f] [headerFile]")
+	print("USAGE: python grepCols.py [TSV File] [-c] [c1],[c2],[c3]")
+	print("USAGE: python grepCols.py [TSV File] [-cnh] [c1],[c2],[c3]")
+else:
+
+	#extract params
+	TSV_file = sys.argv[1]
+	param = sys.argv[2]
+
+	#read in headers or col indicies
+	if(param=='-h'):
+		headers = [sys.argv[i] for i in range(3,len(sys.argv))]
+	elif(param=='-f'):
+		headers = [line.strip() for line in open(sys.argv[3],'r')]
+	elif(param=='-c' or param=='-cnh'):
+		
+		#collapse ranges for columns (if column ranges are specified)
+		colIndices = list()
+		diffRngs = sys.argv[3].split(',')
+		for rng in diffRngs:
+			rng = rng.strip()
+			if(":" in rng):	
+				rngParts = rng.split(':')
+				start = int(rngParts[0])
+				fin = int(rngParts[1])
+				for x in range(start,fin+1):
+					colIndices.append(x+1)
+			else:
+				index = int(rng)
+				colIndices.append(index+1)
+
+	#if necessary, index column names.
+	if(param in['-h','-f']):
+		if('.gz' in TSV_file or '.bgz' in TSV_file):
+			tsvfile = gzip.open(TSV_file,'r')
+		else:
+			tsvfile = open(TSV_file,'r')
+		tsvheader = tsvfile.readline()
+		headerParts = [x.strip() for x in tsvheader.split('\t')]
+		colIndices = [(headerParts.index(header)+1) for header in headers]
+		
+	#run cut command
+	if('.gz' in TSV_file or '.bgz' in TSV_file):
+		catCmd = 'gzcat'
+	else:
+		catCmd = 'cat'
+	cutCmd = catCmd + ' '+TSV_file+' | cut -f '+','.join([str(c) for c in colIndices])
+	os.system(cutCmd)

@@ -1,0 +1,34 @@
+#!/usr/bin/python
+import sys
+import os
+
+#params
+if(len(sys.argv)!=3):
+	print('python filterChromSizes.py [IN_FILE] [OUT_FILE]')
+	sys.exit()
+inFile = sys.argv[1]
+outFile = sys.argv[2]
+
+#hash sizes
+CHROM_SIZE_FILE = '/home/prtandon/Desktop/prattools/Hg1k_v37_fasta/hg19.chrom.sizes'
+sizeHash = dict()
+fin = open(CHROM_SIZE_FILE,'r')
+for line in fin:
+	lineParts = [a.strip() for a in line.split('\t')]
+	sizeHash[lineParts[0]] = int(lineParts[1])
+fin.close()
+
+#filter bed
+fin = open(inFile,'r')
+fout = open(outFile,'w')
+for line in fin:
+	lineParts = [a.strip() for a in line.split('\t')]
+	chrs = lineParts[0]
+	start = int(lineParts[1])
+	end = int(lineParts[2])
+	chromSize = sizeHash[chrs]
+	if(start > chromSize or end > chromSize):
+		continue
+	fout.write(line)
+fout.close()
+fin.close()

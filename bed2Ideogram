@@ -1,0 +1,367 @@
+#!/usr/bin/env python
+import os
+import sys
+import matplotlib.cm
+import matplotlib.colors
+import numpy as np
+import gzip
+
+#USAGE
+USAGE_STATEMENT = "USAGE: python bed2Ideogram.py [in_bed] [out_html] [TYPE={histogram|overlay|heatmap|heatmap_inverted|heatmap_normalized|heatmap_normalized_inverted|heatmap_thresholded|heatmap_zscore|heatmap_chrZScore|heatmap_percentile|heatmap_chrPercentile|heatmap_chrPDF}] [track_description] [Color or Colormap] [thresholded lower lim] [thresholded upper lim]"
+
+#default colors
+DEFAULT_COLOR = '#77F'
+DEFAULT_COLORMAP = 'Oranges'
+POSS_PLOTTYPES = ['histogram','overlay','heatmap','heatmap_inverted','heatmap_normalized','heatmap_normalized_inverted','heatmap_thresholded','heatmap_zscore','heatmap_chrZScore','heatmap_percentile','heatmap_chrPercentile','heatmap_chrPDF']
+
+ANNO_TEMPLATE = (
+    '\t{\n'
+    '\t\tname: \'{NAME}\',\n'
+    '\t\tchr: \'{CHR}\',\n'
+    '\t\tstart: {START},\n'
+    '\t\tstop: {END},\n'
+    '\t\tcolor: \'{COLOR}\''
+    '\t},\n'
+)
+
+HTML_TEMPLATE = (
+	'<head>\n'
+  	'\t<script src="https://unpkg.com/ideogram@1.0.0/dist/js/ideogram.min.js"></script>\n'
+	'</head>\n'
+	'<body>\n'
+	'<h1>{TRACK_DESC}</h1>\n'
+	'<script>\n'
+	'\tvar ideogram = new Ideogram({\n'
+    	'\t\torganism: \'human\',\n'
+	'\tannotations: [\n'
+	'{ANNOTATIONS}'
+	'],\n'
+    '\tannotationsLayout: \'{PLOT_TYPE}\',\n'
+    '\torientation: \'horizontal\',\n'
+    '\tchrHeight: 900,\n'
+    '\tresolution: 550,\n'
+	'\t});\n'
+	'</script>\n'
+	'</body>'
+)
+
+def bedLineToAnnoObject(bedLine,cnt,chromosomeSizes,color,val):
+	lineParts = [a.strip() for a in line.split('\t')]
+	chrs = lineParts[0]
+	if('chr' in chrs):
+		chrs = chrs[3:]
+	start = int(lineParts[1])
+	end = int(lineParts[2])
+	if(chrs in chromosomeSizes):
+		if(start > chromosomeSizes[chrs]):
+			start = chromosomeSizes[chrs]
+		if(end > chromosomeSizes[chrs]):
+			end = chromosomeSizes[chrs]
+	if(start<1):
+		start=1
+	if(end<1):
+		end = 1
+	rtn = ANNO_TEMPLATE
+	name = 'region'+str(cnt)
+	if(str(val)!='nan'):
+		name = name + '(val='+str(val)+')'
+	rtn = rtn.replace('{NAME}',name)
+	rtn = rtn.replace('{CHR}',chrs)
+	rtn = rtn.replace('{START}',str(start))
+	rtn = rtn.replace('{END}',str(end))
+	rtn = rtn.replace("{COLOR}",color)
+	return rtn
+
+def getColor(chrs,heatVal,cmap,data_stat,hm_flags):
+
+	#extract data_stat
+	data_min = data_stat[0]
+	data_max = data_stat[1]
+	data_mean = data_stat[2]
+	data_median = data_stat[3]
+	data_std = data_stat[4]
+	data_percentiles = data_stat[5]
+	chr_percentiles = data_stat[6]
+	chr_means = data_stat[7]
+	chr_stds = data_stat[8]
+	chr_sums = data_stat[9]
+
+	#hm flags
+	inverted = hm_flags[0]
+	thresholded = hm_flags[1]
+	thresh = hm_flags[2]
+	zScore = hm_flags[3]
+	percentile = hm_flags[4]
+	chrPercentile = hm_flags[5]
+	chrZScore = hm_flags[6]
+	chrPDF = hm_flags[7]
+
+	#normalizations
+	if(thresholded):
+		data_min = thresh[0]
+		data_max = thresh[1]
+		if(heatVal < data_min):
+			heatVal = data_min
+		if(heatVal > data_max):
+			heatVal = data_max
+	elif(zScore):
+		heatVal = (heatVal - data_mean) / data_std
+		data_min = -3.0
+		data_max = 3.0
+		if(heatVal < data_min):
+			heatVal = data_min
+		if(heatVal > data_max):
+			heatVal = data_max	
+	elif(chrZScore):
+		data_min = -3.0
+		data_max = 3.0
+		if(chr_stds[chrs]==0):
+			heatVal=0.0
+		else:
+			heatVal = (heatVal - chr_means[chrs]) / chr_stds[chrs]
+			if(heatVal < data_min):
+				heatVal = data_min
+			if(heatVal > data_max):
+				heatVal = data_max	
+	elif(percentile):
+		data_min = 0.0
+		data_max = 100.0
+		heatVal=abs(heatVal-data_percentiles).argmin()
+	elif(chrPercentile):
+		data_min = 0.0
+		data_max = 100.0
+		heatVal=abs(heatVal-chr_percentiles[chrs]).argmin()
+	elif(chrPDF):
+		data_min = 0.0
+		data_max = 1.0
+		if(chr_sums[chrs]==0):
+			heatVal = 0.0
+		else:
+			heatVal = heatVal / chr_sums[chrs]
+	normalized = (heatVal-data_min) / (data_max-data_min)
+	if(inverted):
+		normalized = 1.0 - normalized
+	rgba = cmap(normalized)
+	return matplotlib.colors.to_hex(rgba)
+
+def getHeaderFreeFilePointer(inBed):
+	gzipped = False
+	if('.bgz' in inBed or 'bed.gz' in inBed):
+		fin = gzip.open(inBed,'r')
+		gzipped = True
+	else:
+		fin = open(inBed,'r')
+		gzipped = False
+	line = fin.readline()
+	if(gzipped):
+		line = line.decode('UTF-8')
+	possibleHeaderParts = line.split('\t')
+	if(possibleHeaderParts[1].isdigit()):
+		fin.close()
+		if(gzipped):
+			fin = gzip.open(inBed,'r')
+		else:
+			fin = open(inBed,'r')
+	return (fin,gzipped)		
+
+def getEmpiricalStatistics(inBed):
+	(fin,gzipped) = getHeaderFreeFilePointer(inBed)
+	data_min = np.inf
+	data_max = -1*np.inf
+	data_sum = 0
+	numval = 0
+	vals = list()
+	chrVals = dict()
+	for line in fin:
+		if(gzipped):
+			line = line.decode('UTF-8')
+		lineParts = [a.strip() for a in line.split('\t')]
+		chrs = lineParts[0]
+		val = float(lineParts[3])
+		if(val < data_min):
+			data_min = val
+		if(val > data_max):
+			data_max = val
+		vals.append(val)
+		if(chrs not in chrVals):
+			chrVals[chrs] = list()
+		chrVals[chrs].append(val)
+		data_sum = data_sum + val
+		numval = numval + 1
+	fin.close()
+	data_mean = np.nanmean(vals)
+	data_median = np.nanmedian(vals)
+	data_std = np.nanstd(vals)
+	data_percentiles = np.nanpercentile(vals,range(0,101))
+	chr_percentiles = dict()
+	chr_means = dict()
+	chr_stds = dict()
+	chr_sums = dict()
+	for chrs in chrVals.keys():
+		chr_percentiles[chrs] = np.nanpercentile(chrVals[chrs],range(0,101))
+		chr_means[chrs] = np.nanmean(chrVals[chrs])
+		chr_stds[chrs] = np.nanstd(chrVals[chrs])
+		chr_sums[chrs ] = np.nansum(chrVals[chrs])
+	return (data_min,data_max,data_mean,data_median,data_std,data_percentiles,chr_percentiles,chr_means,chr_stds,chr_sums)
+
+#args
+if(len(sys.argv)<5):
+	print(USAGE_STATEMENT)
+	sys.exit()
+inBed = sys.argv[1]
+outHTMLFile = sys.argv[2]
+plotType = sys.argv[3]
+trackDesc = sys.argv[4]	
+if(plotType not in POSS_PLOTTYPES):
+	print(USAGE_STATEMENT)
+	sys.exit()
+colormap = DEFAULT_COLORMAP
+color = DEFAULT_COLOR
+if(len(sys.argv)>=6):
+	cc = sys.argv[5]
+	if('heatmap' in plotType):
+		colormap = cc
+	else:
+		color = cc
+if('heatmap' in plotType):
+	cmap = matplotlib.cm.get_cmap(colormap)
+	emp = getEmpiricalStatistics(inBed)
+#	if('normalized' not in plotType and 'thresholded' not in plotType and 'zscore' not in plotType and 'percentile' not in plotType and 'chrPercentile' not in plotType and 'chrPDF' not in plotType):
+#		data_min = 0
+#		data_max = 1000.0
+#	else:
+	#use empirical statistics
+	data_min = emp[0]
+	data_max = emp[1]
+	data_mean = emp[2]
+	data_median = emp[3]
+	data_std = emp[4]
+	data_percentiles = emp[5]
+	chr_percentiles = emp[6]
+	chr_means = emp[7]
+	chr_stds = emp[8]
+	chr_sums = emp[9]
+	if('inverted' in plotType):
+		inverted = True
+	else:
+		inverted = False
+	if('thresholded' in plotType):
+		thresholded = True
+		thresh = [float(sys.argv[6]),float(sys.argv[7])]
+	else:
+		thresholded = False
+		thresh = [-1,-1]
+	if('zscore' in plotType):
+		zScore = True
+	else:
+		zScore = False
+	if('chrZScore' in plotType):
+		chrZScore = True
+	else:
+		chrZScore = False
+	if('percentile' in plotType):
+		percentile = True
+	else:
+		percentile = False
+	if('chrPercentile' in plotType):
+		chrPercentile = True
+	else:
+		chrPercentile = False
+	if('chrPDF' in plotType):
+		chrPDF = True
+	else:
+		chrPDF = False
+	hm_flags = (inverted,thresholded,thresh,zScore,percentile,chrPercentile,chrZScore,chrPDF)	
+
+#chr ends
+chromosomeSizes = dict()
+chromosomeSizes['1'] = 248956422
+chromosomeSizes['2'] = 242193529
+chromosomeSizes['3'] = 198295559
+chromosomeSizes['4'] = 190214555
+chromosomeSizes['5'] = 181538259
+chromosomeSizes['6'] = 170805979
+chromosomeSizes['7'] = 159345973
+chromosomeSizes['9'] = 138394717
+chromosomeSizes['8'] = 145138636
+chromosomeSizes['10'] = 133797422
+chromosomeSizes['11'] = 135086622
+chromosomeSizes['12'] = 133275309
+chromosomeSizes['13'] = 114364328
+chromosomeSizes['14'] = 107043718
+chromosomeSizes['15'] = 101991189
+chromosomeSizes['16'] = 90338345
+chromosomeSizes['19'] = 58617616
+chromosomeSizes['20'] = 64444167
+chromosomeSizes['21'] = 46709983
+chromosomeSizes['22'] = 50818468
+chromosomeSizes['X'] = 156040895
+chromosomeSizes['Y'] = 57227415
+
+#generate annotations
+(fin,gzipped) = getHeaderFreeFilePointer(inBed)
+cnt = 0
+tempAnnoFile = outHTMLFile + '.anno'
+tempAnno = open(tempAnnoFile,'w')
+for line in fin:
+	if(gzipped):
+		line = line.decode('UTF-8')
+	if('heatmap' in plotType):
+		lineParts = [a.strip() for a in line.split('\t')]
+		chrs = lineParts[0]
+		val = float(lineParts[3])
+		pt_color = getColor(chrs,val,cmap,emp,hm_flags)
+		if(zScore):
+			val = (val - data_mean) / data_std
+		elif(chrZScore):
+			if(chr_stds[chrs]==0):
+				val=0.0
+			else:
+				val = (val - chr_means[chrs]) / chr_stds[chrs]
+		elif(percentile):
+			val=abs(val-data_percentiles).argmin()
+		elif(chrPercentile):
+			val = abs(val-chr_percentiles[chrs]).argmin()
+		elif(chrPDF):
+			if(chr_sums[chrs]==0):
+				val = 0.0
+			else:
+				val = val / chr_sums[chrs]
+	else:
+		pt_color = color
+		val = np.nan
+	annoText = bedLineToAnnoObject(line,cnt,chromosomeSizes,pt_color,val)
+	tempAnno.write(annoText)
+	cnt = cnt  + 1
+#	print(cnt)
+fin.close()
+tempAnno.close()
+annoText = open(tempAnnoFile,'r').readlines()
+annoText = '\n'.join(annoText)
+annoText = annoText[0:-2]
+outHTML= HTML_TEMPLATE
+outHTML = outHTML.replace('{ANNOTATIONS}',annoText.rstrip())
+ideogramJSPlotType = plotType
+if('heatmap' in plotType):
+	ideogramJSPlotType='overlay'
+	trackDesc = trackDesc + '<br>raw data statistics(min='+str(data_min) +', max='+str(data_max)+', mean='+str(data_mean)+', median='+str(data_median)+', std='+str(data_std)+')'
+outHTML = outHTML.replace('{PLOT_TYPE}',ideogramJSPlotType)
+if('zscore' in plotType):
+	trackDesc = trackDesc + '<br>Z-SCORE Scaled (3-sigma)'
+elif('chrZScore' in plotType):
+	trackDesc = trackDesc + '<br>CHROM Z-SCORE Scaled (3-sigma, per chromosome)'
+elif('percentile' in plotType):
+	trackDesc = trackDesc + '<br>PERCENTILE Scaled (0-100)'
+elif('chrPercentile' in plotType):
+	trackDesc = trackDesc + '<br>CHROM PERCENTILE Scaled (0-100, per chromosome)' 
+elif('chrPDF' in plotType):
+	trackDesc = trackDesc + '<br>CHROM Probability Normalized Scaled<br>'
+if('inverted' in plotType):
+	trackDesc = trackDesc + '<br>INVERTED COLORING'
+outHTML = outHTML.replace('{TRACK_DESC}',trackDesc)
+
+#generate html
+fout = open(outHTMLFile,'w')
+fout.write(outHTML)
+fout.close()
+os.system('rm ' + tempAnnoFile)

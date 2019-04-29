@@ -1,0 +1,49 @@
+#!/anaconda3/bin/python
+import sys
+import os
+import math
+from intervaltree_bio import GenomeIntervalTree
+
+#extract params
+if(len(sys.argv) < 6):
+	print("USAGE: python countElem.py [ELEM_FILE] [chrCol] [startCol] [endCol] [WIN_SIZE]")
+	sys.exit()
+ELEM_FILE = sys.argv[1]
+chrCol = int(sys.argv[2])
+startCol = int(sys.argv[3])
+endCol = int(sys.argv[4])
+WIN_SIZE = float(sys.argv[5])
+
+#put data into a gtree
+gtree = GenomeIntervalTree()
+fin = open(ELEM_FILE,'r')
+fin.readline() #discard header
+data_cnt = 1
+for line in fin:
+	line = line.strip()
+	lineParts = line.split('\t')
+	chrs = lineParts[chrCol]
+	start = lineParts[startCol]
+	end = lineParts[endCol]
+	gtree[chrs].addi(int(start),int(end),data_cnt)
+	data_cnt = data_cnt + 1
+fin.close()
+
+#print file
+print('Chr\tStart\tEnd\tElemCounts')
+fin = open('/Users/ptandon/Desktop/tools/prattools/Hg1k_v37_fasta/chr_fa.fa','r')
+for line in fin:
+	line = line.strip()
+	if(">" in line):
+		toks = line.split(':')
+		chrs = toks[0]
+		chrs = 'chr' + chrs[1:]
+	else:
+		seqLen = len(line)
+		numBins = int(math.ceil(seqLen / WIN_SIZE)) + 1
+		for x in range(0,numBins):
+			start = int(x*WIN_SIZE)
+			end = int(((x+1)*WIN_SIZE)-1)
+			results = gtree[chrs].overlap(start,(end+1))
+			print(chrs + '\t' + str(start) + '\t' + str(end) + '\t' + str(len(results)))
+fin.close()

@@ -1,0 +1,25 @@
+#!/usr/bin/python
+import sys
+
+if(len(sys.argv)!=4):
+	print "USAGE: python appendChr.py [InputFile] [ColToModify] [RemoveNonChr]"
+	sys.exit()
+
+#okay chr
+okayChr = [str(a) for a in range(0,23)]
+okayChr.append('X')
+okayChr.append('Y')
+
+#loop
+inFile = open(sys.argv[1])
+colToMod = int(sys.argv[2])
+removeNon = bool(sys.argv[2])
+header = inFile.readline()
+print header.strip()
+for line in inFile:
+	lineParts = line.split('\t')
+	prevStr = str(lineParts[colToMod])
+	if(prevStr in okayChr):
+		lineParts[colToMod] = 'chr' + prevStr
+		lineOut = '\t'.join(lineParts)
+		print lineOut.strip()

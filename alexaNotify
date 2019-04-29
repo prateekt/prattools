@@ -1,0 +1,22 @@
+#!/usr/bin/python
+import os
+import sys
+#import urllib.request
+#import urllib.parse
+import urllib
+import urllib
+
+#notify me key
+NOTIFY_ME_URL = 'https://api.notifymyecho.com/v1/NotifyMe?notification=MSG&accessCode=amzn1.ask.account.AHLH2OVV7F7XO2FI4PRPRQVBQWOPTQPRT4YP53XJKNC5C7XJFXQ3T6JDAMJRNW4VWV5YLC3XCRXRNT3NIHCTWFA4WCJUUGWT52GMT2L2XIZ4TF3XQDIRO5T7SBQDH3QPOFJUBDNH7Z2LZLTUMW35PSSGH63MEMP4UJZRGUV5PL4T5T2EG2FK5EJWS72CGJPRMP4LSSKK3USAIGY'
+
+#params
+if(len(sys.argv)!=2):
+	print('USAGE: python alexaNotify.py [msg]')
+	sys.exit()
+msg = sys.argv[1]
+
+#notify me
+#NOTIFY_ME_URL = NOTIFY_ME_URL.replace('MSG',urllib.parse.quote(msg))
+#urllib.request.urlopen(NOTIFY_ME_URL)
+NOTIFY_ME_URL = NOTIFY_ME_URL.replace('MSG',urllib.quote(msg))
+urllib.urlopen(NOTIFY_ME_URL)

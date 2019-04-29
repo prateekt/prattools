@@ -1,0 +1,70 @@
+#!/usr/bin/python
+import os 
+import sys
+import re
+
+#print
+if(len(sys.argv)!=2):
+	print "USAGE: python convertIndelsToDashFormat [bedFile]"
+else:
+	
+	#print new file
+	bedFile = open(sys.argv[1])
+	header =bedFile.readline()
+	print header.strip()
+	for line in bedFile:
+
+		try:
+			#parse line into parts
+			lineParts = line.split('\t')
+			chrs = lineParts[0].strip()
+			oldStart = int(lineParts[1].strip())
+			oldEnd = int(lineParts[2].strip())
+			oldRef = lineParts[3].strip()
+			oldAlt = lineParts[4].strip()
+			
+			#fix indel
+			pattern = r'[ATCG]'
+			if(re.search(pattern, oldRef) and re.search(pattern,oldAlt) and (len(oldRef) > 1 or len(oldAlt) > 1)):
+			
+				#case one			
+				if(len(oldRef)==1 and len(oldAlt)>1):
+					newStart = oldStart + 1
+					newEnd = newStart
+					newAlt = oldAlt[1:]
+					newRef = '-'
+			
+				#case two
+				if(len(oldAlt)==1 and len(oldRef)>1):
+					newStart = oldStart + 1
+					newEnd = oldStart + len(oldRef) - 1
+					newRef = oldRef[1:]
+					newAlt = '-'		
+
+				#case three
+				if(len(oldAlt)>1 and len(oldRef)>1 and len(oldRef)>len(oldAlt)):
+					newStart = oldStart + len(oldAlt)
+					newRef = oldRef[len(oldAlt):]
+					newEnd = newStart + len(newRef) - 1
+					newAlt = '-'
+
+				#case four
+				if(len(oldAlt)>1 and len(oldRef)>1 and len(oldAlt)>len(oldRef)):
+					newStart = oldStart
+					newEnd = oldStart + len(oldRef) - 1
+					newAlt = oldAlt[len(oldRef):]
+					newRef = '-'
+
+				#print line
+				newLine= chrs + '\t' + str(newStart) + '\t' + str(newEnd) + '\t' + newRef + '\t' + newAlt
+				print newLine
+
+
+			else:
+				#not an indel or not a nicely formatted indel
+				print line.strip()
+		except:
+			#something completely screwed up -- print it back anyway
+			print line.strip()
+			
+			

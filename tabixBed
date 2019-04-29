@@ -1,0 +1,27 @@
+#!/usr/bin/python
+import sys
+import os
+
+def tabixFile(outFile):
+	#tabix file
+	os.system('deleteHeader.sh ' + outFile + ' > ' + outFile + '_noheader')
+	os.system('sortBed2 ' + outFile + '_noheader > ' + outFile + '_sorted')
+#	os.system('addHeader.sh ' + outFile + '_sorted ' + outFile + ' > ' + outFile + '_withheader')
+#	os.system('cat ' + outFile + '_withheader | bgzip > ' + outFile + '.bgz')
+	os.system('cat ' + outFile + '_sorted | bgzip > ' + outFile + '.bgz')
+	os.system('tabix -p bed ' + outFile + '.bgz')
+	os.system('rm ' + outFile+'_noheader '+outFile+'_sorted')
+
+def tabixFile2(outFile):
+	#tabix file
+#	os.system('sortBed2 ' + outFile + ' > ' + outFile + '_sorted')
+	os.system('cat ' + outFile + ' | bgzip > ' + outFile + '.bgz')
+	os.system('tabix -p bed ' + outFile + '.bgz')
+#	os.system('rm *_sorted')
+
+#params
+if(len(sys.argv)!=2):
+	print("USAGE: python tabixBed.py [inBed]")
+	sys.exit()
+inBed = sys.argv[1]
+tabixFile(inBed)

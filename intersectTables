@@ -1,0 +1,36 @@
+#!/usr/bin/python
+import sys
+import os
+
+if(len(sys.argv)!=5):
+	print "USAGE: python intersectTables.py [File1] [File2] [File 1's Cols comma sep] [File 2's Cols comma sep]"
+	print "Finds rows in file 2 that are in file 1."
+else:
+
+	#extract params
+	f1Path = sys.argv[1]
+	f2Path = sys.argv[2]
+	f1Str = sys.argv[3]
+	f2Str = sys.argv[4]
+	
+	#parse strings
+	f1Cols = [int(x.strip()) for x in f1Str.split(',')]
+	f2Cols = [int(x.strip()) for x in f2Str.split(',')]
+
+	#load f1 hashes
+	f1Hashes = set()
+	f1File = open(f1Path,'r')
+	for line in f1File:
+		lineParts = line.split('\t')
+		hashStr = '\t'.join([lineParts[x].strip() for x in f1Cols])
+		f1Hashes.add(hashStr)
+
+	#iter through file 2 to find intersect
+	f2File = open(f2Path,'r')
+	for line in f2File:
+		lineParts = line.split('\t')
+		hashStr = '\t'.join([lineParts[x].strip() for x in f2Cols])
+		if(hashStr in f1Hashes):
+			print hashStr	
+				
+	 

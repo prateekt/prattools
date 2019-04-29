@@ -1,0 +1,68 @@
+#!/usr/bin/python
+import os
+import sys
+import uuid
+
+#args
+if(len(sys.argv)!=2):
+	print "USAGE: python mtable2bedgraph.py [mtable_in_file]"
+	sys.exit()
+in_file = sys.argv[1]
+
+#hash chrom sizes
+chrFin = open('/home/prtandon/Desktop/prattools/chromSizes.bed','r')
+startMap = dict()
+endMap = dict()
+for line in chrFin:
+	lineParts = [a.strip() for a in line.split('\t')]
+	chrs = 'chr' + lineParts[0]
+	start = float(lineParts[1])
+	end = float(lineParts[2])
+	startMap[chrs] = start
+	endMap[chrs] = end
+chrFin.close()
+
+#obtain min/max vals from file
+fin = open(in_file,'r')
+fin.readline() #discard header
+minVal = float('inf')
+maxVal = float('-inf')
+for line in fin:
+	lineParts = [a.strip() for a in line.split('\t')]
+	val = float(lineParts[3])
+	if(val < minVal):
+		minVal = val
+	if(val > maxVal):
+		maxVal = val
+fin.close()
+
+#new temp bed file (unsorted)
+fin = open(in_file,'r')
+fin.readline() #discard header
+hashStr = str(uuid.uuid4())
+tempFile = hashStr + '.bed'
+fout = open(tempFile,'w')
+for line in fin:
+	lineParts = [a.strip() for a in line.split('\t')]
+	chrs = lineParts[0]
+	start = float(lineParts[1])
+	end = float(lineParts[2])
+	if(start < startMap[chrs] or end > endMap[chrs]):
+		continue
+	val = float(lineParts[3])
+	newVal = 1000.0*(val - minVal) / (maxVal-minVal)
+	fout.write('\t'.join(lineParts[0:3]) + '\t' + str(newVal)+'\n')
+fin.close()
+fout.close()
+
+#sort the bed file
+os.system('sortBed2 '+tempFile+' > '+tempFile+'1.bed')
+
+#create bedgraph file out of sorted bed
+fin = open(tempFile+'1.bed','r')
+print 'track type=bedGraph name=\''+in_file+'\' description=\''+in_file+'\''
+for line in fin:
+	print(line.strip())
+
+#remove temp files
+os.system('rm '+tempFile+' '+tempFile+'1.bed')

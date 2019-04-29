@@ -1,0 +1,76 @@
+#!/usr/bin/python
+import sys
+import os
+import gzip
+
+if(len(sys.argv)<3):
+	print("USAGE: python grepCols.py [TSV File] [-h] [h1] [h2]...[hn]")
+	print("USAGE: python grepCols.py [TSV File] [-f] [headerFile]")
+	print("USAGE: python grepCols.py [TSV File] [-c] [c1],[c2],[c3]")
+	print("USAGE: python grepCols.py [TSV File] [-cnh] [c1],[c2],[c3]")
+elif(sys.argv[2] not in ['-h','-f','-c','-cnh']):
+	print("USAGE: python grepCols.py [TSV File] [-h] [h1] [h2]...[hn]")
+	print("USAGE: python grepCols.py [TSV File] [-f] [headerFile]")
+	print("USAGE: python grepCols.py [TSV File] [-c] [c1],[c2],[c3]")
+	print("USAGE: python grepCols.py [TSV File] [-cnh] [c1],[c2],[c3]")
+else:
+
+	#extract params
+	TSV_file = sys.argv[1]
+	param = sys.argv[2]
+
+	#read in headers or col indicies
+	if(param=='-h'):
+		headers = list()
+		for i in range(3,len(sys.argv)):
+			headers.append(sys.argv[i])	
+	elif(param=='-f'):
+		headers = list()
+		headerfile = open(sys.argv[3],'r')
+		for line in headerfile:
+			headers.append(line[:-1])
+		headerFile.close()
+	elif(param=='-c' or param=='-cnh'):
+		
+		#collapse ranges for columns (if column ranges are specified)
+		colIndices = list()
+		diffRngs = sys.argv[3].split(',')
+		for rng in diffRngs:
+			rng = rng.strip()
+			if(":" in rng):	
+				rngParts = rng.split(':')
+				start = int(rngParts[0])
+				fin = int(rngParts[1])
+				for x in range(start,fin+1):
+					colIndices.append(x)
+			else:
+				index = int(rng)
+				colIndices.append(index)
+
+	#open appropriate file pointer
+	if('.gz' in TSV_file):
+		tsvfile = gzip.open(TSV_file,'r')
+	else:
+		tsvfile = open(TSV_file,'r')
+
+	#extract header (if necessary)
+	if(param in ['-h','-f','-c']):
+		tsvheader = tsvfile.readline()
+		headerParts = tsvheader.split('\t')
+		headerParts = [x.strip() for x in headerParts]
+		newHeader = ''
+		if(param in ['-h','-f']):
+			colIndices = list()
+			for header in headers:
+				colIndices.append(headerParts.index(header))
+				newHeader = newHeader + header + '\t'
+			newHeader = newHeader[:-1]
+		elif(param in ['-c']):
+			newHeader = '\t'.join([headerParts[x] for x in colIndices])
+		print(newHeader)
+		
+	#reduce tsv file
+	for line in tsvfile:
+		lineParts = line.split('\t')
+		newLine = '\t'.join([lineParts[colIndex].strip() for colIndex in colIndices])
+		print(newLine)

@@ -1,0 +1,35 @@
+#!/usr/bin/python
+import sys
+import gzip
+
+if(len(sys.argv)<2):
+	print "USAGE: python validateCols.py [File] [OutFile]"
+else:
+	if(sys.argv[1][-3:]=='.gz'):
+		f=gzip.open(sys.argv[1],'r')
+	else:
+		f = open(sys.argv[1],'r')
+	if(len(sys.argv)==3):
+		writeOutFile = True
+		fout = open(sys.argv[2],'w')
+	else:
+		writeOutFile = False
+	FirstLine = True
+	c=0
+	for line in f:
+		if(FirstLine):
+			headerNums = len(line.split('\t'))
+			print headerNums
+			FirstLine = False
+			if(writeOutFile):
+				fout.write(line.strip() + '\n')
+		else:
+			colNums = len(line.split('\t'))
+			if(colNums!=headerNums):
+				print "SHIT: " + str(colNums) + " " + str(headerNums) + " l:" + str(c)
+			else:
+				if(writeOutFile):
+					fout.write(line.strip() + '\n')
+		c= c + 1
+	if(writeOutFile):
+		fout.close()

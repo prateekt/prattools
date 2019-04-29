@@ -1,0 +1,26 @@
+#!/usr/bin/python
+import sys
+import os
+
+#usage
+if(len(sys.argv)!=2):
+	print "USAGE: python addIncrementingIID.py [InFile]"
+else:
+	inFile = sys.argv[1]
+	colHeader = 'IID'
+	fin = open(inFile,'r')
+	header = fin.readline()
+	headerParts = header.split('\t')
+	if(headerParts[1].isdigit() and headerParts[2].isdigit()):
+		noHeader = True
+	if(noHeader):
+		fin.close()
+		fin = open(inFile,'r')
+	else:
+		header = header.strip() + '\t' + colHeader
+		print header
+	cnt = 0
+	for line in fin:
+		line = line.strip() + '\t' + str(cnt)
+		print line
+		cnt = cnt + 1

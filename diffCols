@@ -1,0 +1,41 @@
+#!/usr/bin/python
+import sys
+import os
+
+if(len(sys.argv)!=5):
+	print "USAGE: python intersectCols.py [File1] [File2] [File1Cols] [File2Cols]"
+else:
+	
+	#extract params
+	f1 = sys.argv[1]
+	f2 = sys.argv[2]
+	cols1 = sys.argv[3]
+	cols2 = sys.argv[4]
+	
+	#cols
+	f1Cols = cols1.split(",")
+	f2Cols = cols2.split(",")
+
+	#hash file 2
+	f2HashSet = set()
+	file2 = open(f2)
+	for line in file2:
+		lineParts = line.split('\t')
+		hashStr = ''
+		for col in f2Cols:
+			hashStr = hashStr + lineParts[int(col)] + '\t'
+		hashStr = hashStr[:-1]
+		f2HashSet.add(hashStr)
+	
+	#iter through file 1 and report lines in file 1 but not in file 2
+	file1 = open(f1)
+	for line in file1:
+		lineParts = line.split('\t')
+		hashStr = ''
+		for col in f1Cols:
+			hashStr = hashStr + lineParts[int(col)] + '\t'
+		hashStr = hashStr[:-1]
+		if(hashStr not in f2HashSet):
+			print line[:-1]
+
+	

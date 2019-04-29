@@ -1,0 +1,51 @@
+#!/usr/bin/python
+import os
+import sys
+
+#check input
+if(len(sys.argv)!=4):
+	print "USAGE: python intersectVCF.py [VCF_file] [DNM_file] [DNM_file_cols]"
+else:
+
+	#extract params
+	VCF_file = sys.argv[1]
+	DNM_file = sys.argv[2]
+	DNMFileCols = [int(x.strip()) for x in sys.argv[3].split(',')]
+
+	#load DNM file hashes
+	hashStrs = set()
+	isInVCF = dict()
+	hasRS = dict()
+	DNMFile = open(DNM_file,'r')
+	DNMFile.readline() #discard header
+	for line in DNMFile:
+		lineParts = line.split('\t')
+		hashStr = '\t'.join([lineParts[x].strip() for x in DNMFileCols])
+		hashStrs.add(hashStr)
+		isInVCF[hashStr] = 0
+		hasRS[hashStr] = 0
+	DNMFile.close()
+	
+	with open(VCF_file, 'r') as VCFFile:
+		for line in VCFFile:
+			lineParts = line.split('\t')
+			if(len(lineParts) > 2):
+				hashStr = lineParts[0].strip() + '\t' + lineParts[1].strip()
+				if(hashStr in hashStrs):
+					isInVCF[hashStr] = 1
+					if('rs' in line):
+						hasRS[hashStr] = 1
+	VCFFile.close()
+	
+	#print final table
+	DNMFile = open(DNM_file,'r')
+	print 'Chr\tPos\tIs_In_VCF\tHas_RS_Num'
+	DNMFile.readline() #discard header
+	for line in DNMFile:
+		lineParts = line.split('\t')
+		hashStr = '\t'.join([lineParts[x].strip() for x in DNMFileCols])
+		lineToWrite = hashStr + '\t' + str(isInVCF[hashStr]) + '\t' + str(hasRS[hashStr])
+		print lineToWrite
+
+	 	
+			

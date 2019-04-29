@@ -1,0 +1,14 @@
+#!/usr/bin/python
+import os
+import sys
+
+#params
+if(len(sys.argv)!=3):
+	print('USAGE: python [command] [job_name]')
+	sys.exit()
+command = sys.argv[1]
+jobName = sys.argv[2]
+
+#do commands
+os.system(command)
+os.system('alexaNotify \"job ' + jobName + ' is done.\"')

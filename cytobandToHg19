@@ -1,0 +1,75 @@
+#!/usr/bin/env python
+import sys
+import os
+import math
+import gzip
+import re
+
+#extract params
+if(len(sys.argv) < 4):
+	print("USAGE: python cytoBandToHg19.py [IN_FILE] [CYTOBAND_COL] [OUT_FILE]")
+	sys.exit()
+CYTOBAND_GZ = '/Users/ptandon/Desktop/tools/prattools/Hg1k_v37_fasta/cytoBand.txt.bgz'
+inFile = sys.argv[1]
+cytobandCol = int(sys.argv[2])
+outFile = sys.argv[3]
+
+#hash cytoband file
+fin = gzip.open(CYTOBAND_GZ,'r')
+cytoDict = dict()
+for line in fin:
+	line = line.decode('UTF-8').strip()
+	lineParts = line.split('\t')
+	chrs = lineParts[0]
+	start = int(lineParts[1])
+	end = int(lineParts[2])
+	cytoband = lineParts[3]
+	cytoHash = chrs + '\t' + cytoband
+	rHash = chrs + '\t' + str(start) + '\t' + str(end)
+	cytoDict[cytoHash] = rHash
+fin.close()
+
+#convert file
+fin = open(inFile,'r')
+fout = open(outFile,'w')
+header = fin.readline()
+newHeader = 'Chr\tStart\tEnd\tCopyNumber\t'+header
+fout.write(newHeader)
+for line in fin:
+
+	#read line and event
+	line = line.strip()
+	lineParts = line.split('\t')
+	event = lineParts[cytobandCol].strip()
+
+	#parse cytoband event
+	parts = re.split('p|q|x',event)
+	parts[0] = parts[0]
+	if(('q'+parts[1]) in line):
+		parts[1] = 'q'+parts[1]
+	if(('p'+parts[1] in line)):
+		parts[1] = 'p'+parts[1]
+	if(('q'+parts[2]) in line):
+		parts[2] = 'q'+parts[2]
+	if(('p'+parts[2] in line)):
+		parts[2] = 'p'+parts[2]
+	chrs = 'chr'+parts[0]
+	cytoStart = parts[1]
+	cytoEnd = parts[2]
+	copyNumber = parts[3]
+
+	#convert to hg19
+	cytoStartHash = chrs + '\t' + cytoStart
+	cytoEndHash = chrs + '\t' + cytoEnd
+	startRRegion = cytoDict[cytoStartHash]
+	endRRegion = cytoDict[cytoEndHash]
+	startRRegionParts = startRRegion.split('\t')
+	endRRegionParts = endRRegion.split('\t')
+	start = int(startRRegionParts[1])
+	end = int(endRRegionParts[2])
+
+	#print
+	newLine = chrs + '\t' + str(start) + '\t' + str(end) + '\t' + copyNumber + '\t' + line + '\n'
+	fout.write(newLine)
+fin.close()
+fout.close()

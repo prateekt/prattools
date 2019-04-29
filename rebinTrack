@@ -1,0 +1,66 @@
+#!/usr/bin/env python
+import sys
+import os
+import math
+from intervaltree_bio import GenomeIntervalTree
+
+def getOverlap(a, b):
+	return max(0, min(a[1], b[1]) - max(a[0], b[0]))
+
+#extract params
+if(len(sys.argv) < 3):
+	print("USAGE: python rebinTrack.py [FILE] [WIN_SIZE]")
+	sys.exit()
+FILE = sys.argv[1]
+WIN_SIZE = float(sys.argv[2])
+
+#put data into a gtree
+gtree = GenomeIntervalTree()
+fin = open(FILE,'r')
+fin.readline() #discard header
+for line in fin:
+
+	#extract parts
+	line = line.strip()
+	lineParts = [a.strip() for a in line.split('\t')]
+	chrs = lineParts[0]
+	chrs = chrs[3:]
+	start = int(lineParts[1])
+	end = int(lineParts[2])
+	if(lineParts[3].lower()=='nan'):
+		continue
+	sumData = float(lineParts[3])
+	
+	#add to tree
+	gtree[chrs].addi(start,end,sumData)
+fin.close()
+
+#print file
+print('Chr\tStart\tEnd\tVals')
+fin = open('/Users/ptandon/Desktop/tools/prattools/Hg1k_v37_fasta/chr_fa.fa','r')
+for line in fin:
+	line = line.strip()
+	if(">" in line):
+		toks = line.split(':')
+		chrs = toks[0]
+		chrs = chrs[1:]
+	else:
+		seqLen = len(line)
+		numBins = int(math.ceil(seqLen / WIN_SIZE)) + 1
+		for x in range(0,numBins):
+			start = int(x*WIN_SIZE)
+			end = int(((x+1)*WIN_SIZE)-1)
+			results = gtree[chrs].overlap(start,(end+1))
+			totalOverlapArea = 0
+			weightedSum  = 0
+			for result in results:
+				bpOverlap = getOverlap([start,end],[result.begin,result.end])
+				weightedSum = weightedSum + bpOverlap*result.data
+				totalOverlapArea = totalOverlapArea + bpOverlap
+			if(totalOverlapArea>0):
+				finalAvg = weightedSum / totalOverlapArea
+			else:
+				#finalAvg = -2.0
+				continue
+			lineToWrite = 'chr' + chrs + '\t' + str(start) + '\t' + str(end) + '\t' + str(finalAvg)
+			print(lineToWrite)

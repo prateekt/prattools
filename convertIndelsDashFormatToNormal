@@ -1,0 +1,96 @@
+#!/usr/bin/python
+import sys
+import os
+import re
+import math
+
+if(len(sys.argv)<3):
+	print "USAGE: python convertIndelsDashFormatToNormal [bedFileIn] [bedFileOut] [FastaFile]"
+else:
+	#extract params
+	bedFileIn = sys.argv[1]
+	bedFileOut = sys.argv[2]
+	if(len(sys.argv)==3):
+		fastaFile = '~/Desktop/GVCode/lib/Hg1k_v37_fasta/human_g1k_v37.fasta'
+	else:
+		fastaFile = sys.argv[3]
+	
+	#write new bed file with correct start/end ranges
+	fin = open(bedFileIn,'r')
+	fout1 = open('temp.bed','w')
+	linecnt=0
+	for line in fin:
+		lineParts = line.split('\t')
+
+		#first line deal with header
+		if(linecnt==0 and (not lineParts[1].isdigit() or not lineParts[2].isdigit())):
+			linecnt = linecnt + 1
+			continue
+		linecnt = linecnt + 1
+
+		#parse bed file
+		chrs = lineParts[0].strip()
+		start = int(lineParts[1].strip())
+		end = int(lineParts[2].strip())
+		ref = lineParts[3].strip()
+		alt = lineParts[4].strip()
+		if(alt=='-'):
+			start = start - 2
+		else:
+			start = start - 1
+		newLine = chrs + '\t' + str(start) + '\t' + str(end) + '\t' + ref + '\t' + alt
+		fout1.write(newLine + '\n')
+	fout1.close()
+	fin.close()
+
+	#extract fa file for old bed
+	cmd = 'bedtools getfasta -fi ' + fastaFile + ' -bed temp.bed -fo temp.fa'
+	os.system(cmd)
+	
+	#write new bed file
+	fin = open(bedFileIn,'r')
+	fin_fasta = open('temp.fa','r')
+	fout = open(bedFileOut,'w')
+	linecnt = 0
+	for line in fin:
+		lineParts = line.split('\t')
+		
+		#deal with first line header		
+		if(linecnt==0 and (not lineParts[1].isdigit() or not lineParts[2].isdigit())):
+			linecnt = linecnt + 1
+			newLine = line.strip()
+			fout.write(newLine + '\n')
+			continue
+		linecnt = linecnt + 1
+				
+		#parse bed file
+		chrs = lineParts[0].strip()
+		start = int(lineParts[1].strip())
+		end = int(lineParts[2].strip())
+		ref = lineParts[3].strip()
+		alt = lineParts[4].strip()
+
+		#read fasta
+		fastaline = fin_fasta.readline()
+		fastaline = fin_fasta.readline()
+		
+		#insertion		
+		if(ref=='-'):
+			ref = fastaline.strip()
+			alt = ref + alt
+	
+		#deletion
+		elif(alt=='-'):
+			ref = fastaline.strip()
+			alt = ref[0]
+			start = start - 1
+
+		#write
+		newLine = chrs + '\t' + str(start) + '\t' + str(end) + '\t' + ref + '\t' + alt + '\t' + '\t'.join(lineParts[5:])
+		fout.write(newLine.strip() + '\n')
+	fout.close()
+	fin.close()
+
+	#remove temp files
+	os.system('rm temp.bed')
+	os.system('rm temp.fa')	

@@ -1,0 +1,29 @@
+#!/usr/bin/python
+import sys
+import os
+
+#param check
+if(len(sys.argv)!=3):
+	print "USAGE: python TSVToSafeBed.py [InputTSV] [OutputTSV]"
+	sys.exit(0)
+
+SAFE_DELIM = ':::' 
+inputTSV = sys.argv[1]
+outputTSV = sys.argv[2]
+
+#loop for creating temporary unsorted file
+fin = open(inputTSV,'r')
+fout = open('temp_unsorted.txt','w')
+for line in fin:
+	line = line.strip()
+	lineParts = line.split('\t')
+	newLine = '\t'.join(lineParts[0:3]) + '\t' + SAFE_DELIM.join(lineParts[3:len(lineParts)])
+	fout.write(newLine + '\n')
+fout.close()
+
+#run commands to sort
+os.system('deleteHeader.sh temp_unsorted.txt > temp_unsorted_noheader.bed')
+os.system('sortBed -i temp_unsorted_noheader.bed > ' + outputTSV)
+
+#clean up temporary files
+os.system('rm temp_unsorted.txt temp_unsorted_noheader.bed')

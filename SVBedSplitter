@@ -1,0 +1,43 @@
+#!/usr/bin/python
+import os
+import sys
+
+if(len(sys.argv)!=4):
+	print "USAGE: python SVBedSpliiter.py [IN_BED] [OUT_PREFIX] [SPLIT_COUNT]"
+	sys.exit()
+inBed = sys.argv[1]
+outPrefix = sys.argv[2]
+numPer = int(sys.argv[3])
+
+#mkdir
+os.system('rm -rf ' + outPrefix)
+os.mkdir(outPrefix)
+
+#open fin and read header
+fin = open(inBed,'r')
+header = fin.readline()
+
+#loop
+#make output files
+cnt=0
+fcnt=0
+for line in fin:
+
+	#see if need to create new file
+	if(cnt==0):
+		cFile = outPrefix + '/' + outPrefix + str(fcnt) + '.txt'
+		fout = open(cFile,'w')
+		fout.write(header)
+		fcnt+=1
+	fout.write(line)
+	cnt+=1
+	if(cnt==(numPer-1)):
+		fout.close()
+		cnt=0
+
+#close final file
+if(cnt!=0):
+	fout.close()
+	cnt=0
+fin.close()
+print 'Wrote ' + str(fcnt) + ' files.'
