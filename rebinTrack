@@ -3,6 +3,8 @@ import sys
 import os
 import math
 from intervaltree_bio import GenomeIntervalTree
+import tabix
+import numpy as np
 
 def getOverlap(a, b):
 	return max(0, min(a[1], b[1]) - max(a[0], b[0]))
@@ -13,27 +15,31 @@ if(len(sys.argv) < 3):
 	sys.exit()
 FILE = sys.argv[1]
 WIN_SIZE = float(sys.argv[2])
+USE_TABIX = ('.gz' in FILE) or ('.bgz' in FILE)
 
-#put data into a gtree
-gtree = GenomeIntervalTree()
-fin = open(FILE,'r')
-fin.readline() #discard header
-for line in fin:
+#open tabix file or put data into a gtree
+if(USE_TABIX):
+	tb = tabix.open(FILE)
+else:
+	gtree = GenomeIntervalTree()
+	fin = open(FILE,'r')
+	fin.readline() #discard header
+	for line in fin:
 
-	#extract parts
-	line = line.strip()
-	lineParts = [a.strip() for a in line.split('\t')]
-	chrs = lineParts[0]
-	chrs = chrs[3:]
-	start = int(lineParts[1])
-	end = int(lineParts[2])
-	if(lineParts[3].lower()=='nan'):
-		continue
-	sumData = float(lineParts[3])
-	
-	#add to tree
-	gtree[chrs].addi(start,end,sumData)
-fin.close()
+		#extract parts
+		line = line.strip()
+		lineParts = [a.strip() for a in line.split('\t')]
+		chrs = lineParts[0]
+		chrs = chrs[3:]
+		start = int(lineParts[1])
+		end = int(lineParts[2])
+		if(lineParts[3].lower()=='nan'):
+			continue
+		sumData = float(lineParts[3])
+		
+		#add to tree
+		gtree[chrs].addi(start,end,sumData)
+	fin.close()
 
 #print file
 print('Chr\tStart\tEnd\tVals')
@@ -43,24 +49,41 @@ for line in fin:
 	if(">" in line):
 		toks = line.split(':')
 		chrs = toks[0]
-		chrs = chrs[1:]
+		chrs = 'chr'+chrs[1:]
 	else:
 		seqLen = len(line)
 		numBins = int(math.ceil(seqLen / WIN_SIZE)) + 1
 		for x in range(0,numBins):
 			start = int(x*WIN_SIZE)
 			end = int(((x+1)*WIN_SIZE)-1)
-			results = gtree[chrs].overlap(start,(end+1))
+
+			#query results
+			resultStarts = list()
+			resultEnds = list()
+			resultData = list()
+			if(USE_TABIX):
+				results = tb.query(chrs,start,(end+1))
+				for result in results:
+					resultStarts.append(int(result[1]))
+					resultEnds.append(int(result[2]))
+					resultData.append(float(result[3]))
+			else:
+				results = gtree[chrs].overlap(start,(end+1))
+				for result in results:
+					resultStarts.append(result.begin)
+					resultEnds.append(result.end)
+					resultData.append(result.data)
+
+			#compute
 			totalOverlapArea = 0
 			weightedSum  = 0
-			for result in results:
-				bpOverlap = getOverlap([start,end],[result.begin,result.end])
-				weightedSum = weightedSum + bpOverlap*result.data
+			for resultInd in range(0,len(resultStarts)):
+				bpOverlap = getOverlap([start,end],[resultStarts[resultInd],resultEnds[resultInd]])
+				weightedSum = weightedSum + bpOverlap*resultData[resultInd]
 				totalOverlapArea = totalOverlapArea + bpOverlap
 			if(totalOverlapArea>0):
 				finalAvg = weightedSum / totalOverlapArea
 			else:
-				#finalAvg = -2.0
-				continue
-			lineToWrite = 'chr' + chrs + '\t' + str(start) + '\t' + str(end) + '\t' + str(finalAvg)
+				finalAvg = np.nan #no data for window
+			lineToWrite = chrs + '\t' + str(start) + '\t' + str(end) + '\t' + str(finalAvg)
 			print(lineToWrite)
