@@ -2,20 +2,23 @@
 import os
 import sys
 import uuid
+import numpy as np
 
 #args
-if(len(sys.argv)!=2):
-	print("USAGE: python mtable2bedgraph.py [mtable_in_file]")
+if(len(sys.argv)!=4):
+	print("USAGE: python mtable2bedgraph.py [mtable_in_file] [filterOutliers] [outFile]")
 	sys.exit()
 in_file = sys.argv[1]
+filterOutliers = int(sys.argv[2])
+outFile = sys.argv[3]
 
 #hash chrom sizes
-chrFin = open(os.environ['CHROM_SIZES'],'r')
+chrFin = open(os.environ['HG19CHROMRANGES'],'r')
 startMap = dict()
 endMap = dict()
 for line in chrFin:
 	lineParts = [a.strip() for a in line.split('\t')]
-	chrs = 'chr' + lineParts[0]
+	chrs = lineParts[0]
 	start = float(lineParts[1])
 	end = float(lineParts[2])
 	startMap[chrs] = start
@@ -27,6 +30,7 @@ fin = open(in_file,'r')
 fin.readline() #discard header
 minVal = float('inf')
 maxVal = float('-inf')
+data = list()
 for line in fin:
 	lineParts = [a.strip() for a in line.split('\t')]
 	val = float(lineParts[3])
@@ -34,7 +38,12 @@ for line in fin:
 		minVal = val
 	if(val > maxVal):
 		maxVal = val
+	data.append(val)
 fin.close()
+data = np.array(data)
+meanVal = np.nanmean(data)
+stdVal = np.nanstd(data)
+del data
 
 #new temp bed file (unsorted)
 fin = open(in_file,'r')
@@ -50,6 +59,12 @@ for line in fin:
 	if(start < startMap[chrs] or end > endMap[chrs]):
 		continue
 	val = float(lineParts[3])
+	if(filterOutliers==1):
+		z = (val - meanVal) / (stdVal)
+		if(z > 3.0):
+			val = meanVal + 3.0*stdVal
+		elif(z < -3.0):
+			val = meanVal - 3.0*stdVal
 	newVal = 1000.0*(val - minVal) / (maxVal-minVal)
 	fout.write('\t'.join(lineParts[0:3]) + '\t' + str(newVal)+'\n')
 fin.close()
@@ -60,9 +75,11 @@ os.system('sortBed2 '+tempFile+' > '+tempFile+'1.bed')
 
 #create bedgraph file out of sorted bed
 fin = open(tempFile+'1.bed','r')
-print('track type=bedGraph name=\''+in_file+'\' description=\''+in_file+'\'')
+fout = open(outFile,'w')
+fout.write('track type=bedGraph name=\''+in_file+'\' description=\''+in_file+'\'\n')
 for line in fin:
-	print(line.strip())
+	fout.write(line.strip()+'\n')
+fout.close()
 
 #remove temp files
 os.system('rm '+tempFile+' '+tempFile+'1.bed')

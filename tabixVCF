@@ -1,0 +1,15 @@
+#!/usr/bin/python
+import sys
+import os
+
+def tabixFile(inFile):
+	#tabix file
+	os.system('bgzip -c '+inFile+' > '+inFile+'.gz')
+	os.system('tabix -p vcf '+inFile+'.gz')
+
+#params
+if(len(sys.argv)!=2):
+	print("USAGE: python tabixVCF.py [inVCF]")
+	sys.exit()
+inVCF = sys.argv[1]
+tabixFile(inVCF)

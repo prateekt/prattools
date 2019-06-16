@@ -1,0 +1,15 @@
+#!/usr/bin/python
+import os
+import sys
+
+#params
+if(len(sys.argv)!=2):
+	print('USAGE: python pyTabbit.py [in_file]')
+	sys.exit()
+inFile = sys.argv[1]
+
+#loop
+fin = open(inFile,'r')
+for line in fin:
+	print("\t".join(line.split()))
+fin.close()
