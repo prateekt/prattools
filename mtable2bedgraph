@@ -5,12 +5,13 @@ import uuid
 import numpy as np
 
 #args
-if(len(sys.argv)!=4):
-	print("USAGE: python mtable2bedgraph.py [mtable_in_file] [filterOutliers] [outFile]")
+if(len(sys.argv)!=5):
+	print("USAGE: python mtable2bedgraph.py [mtable_in_file] [rescaleOutput] [filterOutliers] [outFile]")
 	sys.exit()
 in_file = sys.argv[1]
-filterOutliers = int(sys.argv[2])
-outFile = sys.argv[3]
+rescaleOutput = int(sys.argv[2])
+filterOutliers = int(sys.argv[3])
+outFile = sys.argv[4]
 
 #hash chrom sizes
 chrFin = open(os.environ['HG19CHROMRANGES'],'r')
@@ -65,7 +66,10 @@ for line in fin:
 			val = meanVal + 3.0*stdVal
 		elif(z < -3.0):
 			val = meanVal - 3.0*stdVal
-	newVal = 1000.0*(val - minVal) / (maxVal-minVal)
+	if(rescaleOutput==1):
+		newVal = 1000.0*(val - minVal) / (maxVal-minVal)
+	elif(rescaleOutput==0):
+		newVal = val
 	fout.write('\t'.join(lineParts[0:3]) + '\t' + str(newVal)+'\n')
 fin.close()
 fout.close()
