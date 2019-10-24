@@ -4,7 +4,7 @@
 #include <math.h> 
 #include <string.h>
 
-#define BUFFER_SIZE 1000
+#define BUFFER_SIZE 100000
 
 int main( int argc, char *argv[]) {
 	if(argc!=7) {
