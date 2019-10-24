@@ -15,8 +15,8 @@ def tabixFile(outFile):
 def tabixFile2(outFile):
 	#tabix file
 #	os.system('sortBed2 ' + outFile + ' > ' + outFile + '_sorted')
-	os.system('cat ' + outFile + ' | bgzip > ' + outFile + '.bgz')
-	os.system('tabix -p bed ' + outFile + '.bgz')
+	os.system('cat ' + outFile + ' | bgzip > ' + outFile + '.gz')
+	os.system('tabix -p bed ' + outFile + '.gz')
 #	os.system('rm *_sorted')
 
 #params
