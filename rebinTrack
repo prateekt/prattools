@@ -15,7 +15,7 @@ if(len(sys.argv) < 3):
 	sys.exit()
 FILE = sys.argv[1]
 WIN_SIZE = float(sys.argv[2])
-USE_TABIX = ('.gz' in FILE) or ('.bgz' in FILE)
+USE_TABIX = (FILE.endswith('.gz')) or (FILE.endswith('.bgz'))
 
 #open tabix file or put data into a gtree
 if(USE_TABIX):
@@ -30,7 +30,6 @@ else:
 		line = line.strip()
 		lineParts = [a.strip() for a in line.split('\t')]
 		chrs = lineParts[0]
-		chrs = chrs[3:]
 		start = int(lineParts[1])
 		end = int(lineParts[2])
 		if(lineParts[3].lower()=='nan'):
