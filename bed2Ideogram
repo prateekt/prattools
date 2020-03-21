@@ -178,9 +178,9 @@ def get_header_free_file_pointer(in_bed):
 	if possible_header_parts[1].isdigit():
 		fin.close()
 		if gzipped:
-			fin = gzip.open(inBed, 'r')
+			fin = gzip.open(in_bed, 'r')
 		else:
-			fin = open(inBed, 'r')
+			fin = open(in_bed, 'r')
 	return fin, gzipped
 
 
