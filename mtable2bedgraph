@@ -1,89 +1,53 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 import os
 import sys
 import uuid
 import numpy as np
+import pandas as pd
 
 #args
-if(len(sys.argv)!=5):
-	print("USAGE: python mtable2bedgraph.py [mtable_in_file] [rescaleOutput] [filterOutliers] [outFile]")
+if(len(sys.argv)!=4):
+	print("USAGE: python mtable2bedgraph.py [mtable_in_file] [hg19 or hg38] [outFile]")
 	sys.exit()
 in_file = sys.argv[1]
-rescaleOutput = int(sys.argv[2])
-filterOutliers = int(sys.argv[3])
-outFile = sys.argv[4]
+assembly = sys.argv[2]
+outFile = sys.argv[3]
+if assembly == 'hg19':
+	chr_file = os.environ['HG19CHROMRANGES']
+elif assembly == 'hg38':
+	chr_file = os.environ['HG38CHROMRANGES']
 
 #hash chrom sizes
-chrFin = open(os.environ['HG19CHROMRANGES'],'r')
-startMap = dict()
-endMap = dict()
-for line in chrFin:
-	lineParts = [a.strip() for a in line.split('\t')]
-	chrs = lineParts[0]
-	start = float(lineParts[1])
-	end = float(lineParts[2])
-	startMap[chrs] = start
-	endMap[chrs] = end
-chrFin.close()
-
-#obtain min/max vals from file
-fin = open(in_file,'r')
-fin.readline() #discard header
-minVal = float('inf')
-maxVal = float('-inf')
-data = list()
-for line in fin:
-	lineParts = [a.strip() for a in line.split('\t')]
-	val = float(lineParts[3])
-	if(val < minVal):
-		minVal = val
-	if(val > maxVal):
-		maxVal = val
-	data.append(val)
-fin.close()
-data = np.array(data)
-meanVal = np.nanmean(data)
-stdVal = np.nanstd(data)
-del data
+chr_tbl = pd.read_csv(chr_file,sep='\t',header=None,names=['chr','start','end'])
 
 #new temp bed file (unsorted)
 fin = open(in_file,'r')
 fin.readline() #discard header
-hashStr = str(uuid.uuid4())
-tempFile = hashStr + '.bed'
-fout = open(tempFile,'w')
+hash_str = str(uuid.uuid4())
+temp_file = hash_str + '.bed'
+fout = open(temp_file,'w')
 for line in fin:
-	lineParts = [a.strip() for a in line.split('\t')]
-	chrs = lineParts[0]
-	start = float(lineParts[1])
-	end = float(lineParts[2])
-	if(start < startMap[chrs] or end > endMap[chrs]):
+	line_parts = [a.strip() for a in line.split('\t')]
+	chrs = line_parts[0]
+	start = int(line_parts[1])
+	end = int(line_parts[2])
+	if(start < chr_tbl.start[chr_tbl.chr==chrs] or end > chr_tbl.end[chr_tbl.chr==chrs]):
 		continue
-	val = float(lineParts[3])
-	if(filterOutliers==1):
-		z = (val - meanVal) / (stdVal)
-		if(z > 3.0):
-			val = meanVal + 3.0*stdVal
-		elif(z < -3.0):
-			val = meanVal - 3.0*stdVal
-	if(rescaleOutput==1):
-		newVal = 1000.0*(val - minVal) / (maxVal-minVal)
-	elif(rescaleOutput==0):
-		newVal = val
-	fout.write('\t'.join(lineParts[0:3]) + '\t' + str(newVal)+'\n')
+	val = float(line_parts[3])
+	fout.write('\t'.join(line_parts[0:3]) + '\t' + str(val)+'\n')
 fin.close()
 fout.close()
 
 #sort the bed file
-os.system('sortBed2 '+tempFile+' > '+tempFile+'1.bed')
+os.system('sortBed2 '+temp_file+' > '+temp_file+'1.bed')
 
 #create bedgraph file out of sorted bed
-fin = open(tempFile+'1.bed','r')
-fout = open(outFile,'w')
+fin = open(temp_file+'1.bed','r')
+fout = open(out_file,'w')
 fout.write('track type=bedGraph name=\''+in_file+'\' description=\''+in_file+'\'\n')
 for line in fin:
 	fout.write(line.strip()+'\n')
 fout.close()
 
 #remove temp files
-os.system('rm '+tempFile+' '+tempFile+'1.bed')
+os.system('rm '+temp_file+' '+temp_file+'1.bed')
